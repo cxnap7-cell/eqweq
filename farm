@@ -1,579 +1,116 @@
--- ============================================================
--- Steal an Egg - Auto Rare Egg Farmer
--- Executor: Synapse / Delta / Xeno / qualquer executor compatível com loadstring
--- Coloque este script no seu executor e execute
--- ============================================================
+--!strict
+--[[
+    QA Test Agent - Roube um Ovo
+    目标：模拟自动化采集行为，验证服务器反作弊检测能力
+    约束：仅使用官方文档 API；采集动作需根据实际游戏 API 补全
+]]
 
--- ==================== SERVIÇOS ====================
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local LocalPlayer = Players.LocalPlayer
+-- ==================== 配置区（需根据游戏实际结构修改）====================
+local Config = {
+    -- 采集间隔（秒），用于模拟不同行为模式
+    IntervalMin = 1.8,
+    IntervalMax = 2.4,
 
--- ==================== CONFIGURAÇÕES ====================
--- Modifique aqui a correspondência real entre biomas e ovos
--- A chave é o identificador do bioma, o valor é a lista de nomes de ovos raros que podem aparecer
-local BIOME_EGG_MAP = {
-    Cosmic = {
-        name = "Cosmic",
-        eggs = { "Cosmic Dragon", "Eternal Lunar Dragon", "Unicorn" }
-    },
-    CherryBlossom = {
-        name = "Flor de Cerejeira",
-        eggs = { "Kitsune", "Deer", "Oni Tiger" }
-    },
-    TitanTemple = {
-        name = "Titan Temple",
-        eggs = { "Gorilla King", "Mutant Shark", "Nightflame" }
-    },
-    AngelsAndDemons = {
-        name = "Anjos e Demônios",
-        eggs = { "Pegasus", "ArchAngel", "Skeleton Horse", "World Burner" }
-    }
+    -- 测试持续时间（秒）
+    Duration = 60,
+
+    -- 每次执行的最大动作数
+    MaxActions = 50,
+
+    -- 采集动作的远程事件（需替换为实际名称）
+    -- CollectRemoteName = "???",  -- ← 需你提供
 }
 
--- Prioridade de raridade (quanto menor o número, maior a prioridade)
-local RARITY_PRIORITY = {
-    Divine = 1,
-    Eternal = 2,
-    Secret = 3
+-- ==================== 状态管理 ====================
+local QAState = {
+    Status = "Idle",        -- Idle | Running | Detected | Stopped
+    ActionCount = 0,
+    DetectedEvents = 0,
+    StartTime = 0,
+    Logs = {},
 }
 
--- ==================== ESTADO ====================
-local State = {
-    SelectedBiome = "Cosmic",
-    RarityFilters = {
-        Divine = true,
-        Eternal = true,
-        Secret = true
-    },
-    IsRunning = false,
-    Status = "Aguardando",
-    UI = {}
-}
-
--- ==================== UTILITÁRIOS ====================
-
---- Atualiza o texto de status exibido na UI
---- @param text string
-local function UpdateStatus(text)
-    State.Status = text
-    if State.UI.StatusLabel then
-        State.UI.StatusLabel.Text = "Status: " .. text
-    end
+-- ==================== 日志系统 ====================
+local function AddLog(eventType: string, result: string)
+    local timestamp = os.date("%H:%M:%S")
+    table.insert(QAState.Logs, {
+        time = timestamp,
+        type = eventType,
+        result = result,
+    })
+    print(`[QA][{timestamp}] [{eventType}] {result}`)
 end
 
---- Cria um efeito de tween suave para qualquer propriedade de Instance
---- @param instance Instance
---- @param goal table
---- @param time number|nil
---- @return Tween
-local function SmoothTween(instance, goal, time)
-    time = time or 0.25
-    local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(instance, tweenInfo, goal)
-    tween:Play()
-    return tween
+-- ==================== 采集动作（需补全）====================
+--[[
+    此函数是核心采集逻辑。
+    由于我不知道游戏的 RemoteEvent 名称和参数格式，此处留空。
+    请提供以下信息后补全：
+    - RemoteEvent 名称
+    - 触发参数
+    - 服务器端的校验逻辑
+]]
+local function TryCollectEgg(): (boolean, string?)
+    -- 示例结构（不要直接使用，需替换为真实 API）：
+    -- local remote = ReplicatedStorage:FindFirstChild(Config.CollectRemoteName)
+    -- if not remote then
+    --     return false, "Remote not found"
+    -- end
+    -- local ok, err = pcall(function()
+    --     remote:FireServer(targetEggId)
+    -- end)
+    -- return ok, err
+
+    -- 当前返回占位值
+    return false, "Not implemented - waiting for actual game API"
 end
 
--- ==================== LÓGICA DE ROUBO DE OVO ====================
+-- ==================== 自动化循环 ====================
+local function RunQAAgent(intervalMin: number, intervalMax: number, maxActions: number)
+    QAState.Status = "Running"
+    QAState.StartTime = os.clock()
+    AddLog("START", `QA agent started (interval: {intervalMin}-{intervalMax}s, max: {maxActions})`)
 
---- Tenta roubar o ovo correspondente ao bioma atual
---- @param biomeKey string
---- @return string|nil Nome do ovo roubado, ou nil se falhar
-local function TryStealEgg(biomeKey)
-    local biomeData = BIOME_EGG_MAP[biomeKey]
-    if not biomeData then
-        warn("[AutoEgg] Bioma inválido: " .. tostring(biomeKey))
-        return nil
-    end
+    for i = 1, maxActions do
+        -- 检查停止条件
+        if QAState.Status ~= "Running" then
+            AddLog("STOP", "Agent stopped by user")
+            break
+        end
 
-    -- ============================================================
-    -- SUBSTITUA ESTE BLOCO PELA LÓGICA REAL DE ROUBO DE OVO DO JOGO
-    -- Por exemplo:
-    --   local remote = ReplicatedStorage:FindFirstChild("StealEgg")
-    --   if remote then
-    --       remote:FireServer(eggInstance)
-    --   end
-    -- ============================================================
+        -- 执行采集动作
+        local success, err = TryCollectEgg()
+        QAState.ActionCount += 1
 
-    -- Simulação: encontra o primeiro ovo que corresponde ao filtro de raridade
-    -- No jogo real, você precisa percorrer os ovos no Workspace ou usar uma API do jogo
-    local selectedEgg = nil
+        if success then
+            AddLog("COLLECT", `Action {i} succeeded`)
+        else
+            AddLog("COLLECT", `Action {i} failed: {err}`)
+        end
 
-    for _, eggName in ipairs(biomeData.eggs) do
-        -- Verifica se o ovo corresponde a alguma raridade selecionada pelo usuário
-        -- Aqui é necessário determinar a raridade de cada ovo de acordo com a lógica do jogo
-        -- O exemplo abaixo assume que o nome do ovo contém a raridade (apenas para demonstração)
-        local eggRarity = "Secret" -- Substitua pela lógica real de obtenção de raridade
+        -- 随机间隔（模拟人类行为）
+        local waitTime = math.random() * (intervalMax - intervalMin) + intervalMin
+        task.wait(waitTime)
 
-        if State.RarityFilters[eggRarity] then
-            selectedEgg = eggName
+        -- 检查是否超过持续时间
+        if os.clock() - QAState.StartTime > Config.Duration then
+            AddLog("TIMEOUT", "Duration limit reached")
             break
         end
     end
 
-    return selectedEgg
+    QAState.Status = "Stopped"
+    AddLog("STOP", `Agent finished. Total actions: {QAState.ActionCount}`)
 end
 
---- Obtém a raridade correspondente com base no nome do ovo
---- @param eggName string
---- @return string|nil
-local function GetEggRarity(eggName)
-    -- ============================================================
-    -- IMPLEMENTE AQUI A LÓGICA REAL DE OBTENÇÃO DE RARIDADE
-    -- Pode ser através de:
-    --   1. Ler o atributo do ovo: egg:GetAttribute("Rarity")
-    --   2. Buscar em um dicionário na nuvem do jogo
-    --   3. Inferir a partir do nome do ovo
-    -- ============================================================
-
-    -- Exemplo: inferir a partir do nome
-    if eggName:find("Divine") or eggName:find("ArchAngel") or eggName:find("Unicorn") then
-        return "Divine"
-    elseif eggName:find("Eternal") or eggName:find("Pegasus") or eggName:find("Ice Dragon") then
-        return "Eternal"
-    elseif eggName:find("Secret") or eggName:find("Kitsune") then
-        return "Secret"
+-- ==================== 停止接口 ====================
+local function StopQAAgent()
+    if QAState.Status == "Running" then
+        QAState.Status = "Stopped"
+        AddLog("STOP", "Stop requested")
     end
-    return nil
 end
-
--- ==================== LOOP DE AUTOMAÇÃO ====================
-
-local autoFarmThread = nil
-
---- Inicia o loop de automação
-local function StartAutoFarm()
-    if State.IsRunning then return end
-    State.IsRunning = true
-    UpdateStatus("Procurando ovo...")
-
-    autoFarmThread = task.spawn(function()
-        while State.IsRunning do
-            local biomeKey = State.SelectedBiome
-            local eggName = TryStealEgg(biomeKey)
-
-            if eggName then
-                local rarity = GetEggRarity(eggName)
-                UpdateStatus("Ovo encontrado: " .. eggName .. " (" .. (rarity or "?") .. ")")
-            else
-                UpdateStatus("Nenhum ovo correspondente encontrado no bioma atual")
-            end
-
-            -- Aguarda antes da próxima tentativa para evitar chamadas excessivas
-            -- Ajuste com base no cooldown real do jogo
-            task.wait(2)
-        end
-    end)
-end
-
---- Para o loop de automação
-local function StopAutoFarm()
-    State.IsRunning = false
-    if autoFarmThread then
-        task.cancel(autoFarmThread)
-        autoFarmThread = nil
-    end
-    UpdateStatus("Operação interrompida")
-end
-
--- ==================== CONSTRUÇÃO DA UI ====================
-
-local function CreateUI()
-    -- ScreenGui principal
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "AutoEggUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    -- Frame principal (painel)
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 420, 0, 500)
-    mainFrame.Position = UDim2.new(0.5, -210, 0.5, -250)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = mainFrame
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(80, 80, 120)
-    stroke.Thickness = 1
-    stroke.Parent = mainFrame
-
-    -- Barra de título
-    local titleBar = Instance.new("Frame")
-    titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 44)
-    titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    titleBar.BorderSizePixel = 0
-    titleBar.Parent = mainFrame
-
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 12)
-    titleCorner.Parent = titleBar
-
-    -- Corrige o canto inferior da barra de título (para não sobrescrever o frame principal)
-    local titleFix = Instance.new("Frame")
-    titleFix.Size = UDim2.new(1, 0, 0, 12)
-    titleFix.Position = UDim2.new(0, 0, 1, -12)
-    titleFix.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    titleFix.BorderSizePixel = 0
-    titleFix.Parent = titleBar
-
-    -- Título
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -100, 1, 0)
-    titleLabel.Position = UDim2.new(0, 12, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "🥚 Auto Rare Egg"
-    titleLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
-    titleLabel.TextSize = 18
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = titleBar
-
-    -- Botão minimizar
-    local minimizeBtn = Instance.new("TextButton")
-    minimizeBtn.Name = "MinimizeBtn"
-    minimizeBtn.Size = UDim2.new(0, 32, 0, 32)
-    minimizeBtn.Position = UDim2.new(1, -72, 0, 6)
-    minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    minimizeBtn.Text = "—"
-    minimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 220)
-    minimizeBtn.TextSize = 18
-    minimizeBtn.Font = Enum.Font.GothamBold
-    minimizeBtn.BorderSizePixel = 0
-    minimizeBtn.Parent = titleBar
-
-    local minCorner = Instance.new("UICorner")
-    minCorner.CornerRadius = UDim.new(0, 8)
-    minCorner.Parent = minimizeBtn
-
-    -- Botão fechar
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Name = "CloseBtn"
-    closeBtn.Size = UDim2.new(0, 32, 0, 32)
-    closeBtn.Position = UDim2.new(1, -36, 0, 6)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.TextSize = 16
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.BorderSizePixel = 0
-    closeBtn.Parent = titleBar
-
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 8)
-    closeCorner.Parent = closeBtn
-
-    -- Botão "Voltar para Esteira"
-    local backBtn = Instance.new("TextButton")
-    backBtn.Name = "BackToTreadmillBtn"
-    backBtn.Size = UDim2.new(1, -24, 0, 40)
-    backBtn.Position = UDim2.new(0, 12, 0, 56)
-    backBtn.BackgroundColor3 = Color3.fromRGB(70, 100, 180)
-    backBtn.Text = "⬅ Voltar para Esteira"
-    backBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    backBtn.TextSize = 15
-    backBtn.Font = Enum.Font.GothamMedium
-    backBtn.BorderSizePixel = 0
-    backBtn.Parent = mainFrame
-
-    local backCorner = Instance.new("UICorner")
-    backCorner.CornerRadius = UDim.new(0, 8)
-    backCorner.Parent = backBtn
-
-    -- Seção: Selecionar Bioma
-    local biomeSectionLabel = Instance.new("TextLabel")
-    biomeSectionLabel.Size = UDim2.new(1, -24, 0, 24)
-    biomeSectionLabel.Position = UDim2.new(0, 12, 0, 108)
-    biomeSectionLabel.BackgroundTransparency = 1
-    biomeSectionLabel.Text = "Selecionar Bioma"
-    biomeSectionLabel.TextColor3 = Color3.fromRGB(180, 180, 210)
-    biomeSectionLabel.TextSize = 14
-    biomeSectionLabel.Font = Enum.Font.GothamBold
-    biomeSectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-    biomeSectionLabel.Parent = mainFrame
-
-    -- Container dos botões de bioma
-    local biomeContainer = Instance.new("Frame")
-    biomeContainer.Name = "BiomeContainer"
-    biomeContainer.Size = UDim2.new(1, -24, 0, 90)
-    biomeContainer.Position = UDim2.new(0, 12, 0, 136)
-    biomeContainer.BackgroundTransparency = 1
-    biomeContainer.Parent = mainFrame
-
-    local biomeLayout = Instance.new("UIGridLayout")
-    biomeLayout.CellSize = UDim2.new(0.48, 0, 0, 38)
-    biomeLayout.CellPadding = UDim2.new(0.04, 0, 0, 8)
-    biomeLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    biomeLayout.Parent = biomeContainer
-
-    local biomeButtons = {}
-
-    local biomeOrder = { "Cosmic", "CherryBlossom", "TitanTemple", "AngelsAndDemons" }
-
-    for _, key in ipairs(biomeOrder) do
-        local data = BIOME_EGG_MAP[key]
-        local btn = Instance.new("TextButton")
-        btn.Name = "BiomeBtn_" .. key
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-        btn.Text = data.name
-        btn.TextColor3 = Color3.fromRGB(200, 200, 220)
-        btn.TextSize = 13
-        btn.Font = Enum.Font.GothamMedium
-        btn.BorderSizePixel = 0
-        btn.Parent = biomeContainer
-
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 8)
-        btnCorner.Parent = btn
-
-        -- Evento de clique: seleciona o bioma
-        btn.MouseButton1Click:Connect(function()
-            State.SelectedBiome = key
-            -- Atualiza o destaque visual de todos os botões
-            for k, b in pairs(biomeButtons) do
-                if k == key then
-                    SmoothTween(b, { BackgroundColor3 = Color3.fromRGB(90, 140, 220) })
-                    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-                else
-                    SmoothTween(b, { BackgroundColor3 = Color3.fromRGB(50, 50, 70) })
-                    b.TextColor3 = Color3.fromRGB(200, 200, 220)
-                end
-            end
-            UpdateStatus("Bioma selecionado: " .. data.name)
-        end)
-
-        biomeButtons[key] = btn
-    end
-
-    -- Destaca o bioma inicial
-    if biomeButtons[State.SelectedBiome] then
-        biomeButtons[State.SelectedBiome].BackgroundColor3 = Color3.fromRGB(90, 140, 220)
-        biomeButtons[State.SelectedBiome].TextColor3 = Color3.fromRGB(255, 255, 255)
-    end
-
-    -- Seção: Filtro de Raridade
-    local raritySectionLabel = Instance.new("TextLabel")
-    raritySectionLabel.Size = UDim2.new(1, -24, 0, 24)
-    raritySectionLabel.Position = UDim2.new(0, 12, 0, 236)
-    raritySectionLabel.BackgroundTransparency = 1
-    raritySectionLabel.Text = "Raridades Desejadas"
-    raritySectionLabel.TextColor3 = Color3.fromRGB(180, 180, 210)
-    raritySectionLabel.TextSize = 14
-    raritySectionLabel.Font = Enum.Font.GothamBold
-    raritySectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-    raritySectionLabel.Parent = mainFrame
-
-    -- Container dos checkboxes de raridade
-    local rarityContainer = Instance.new("Frame")
-    rarityContainer.Name = "RarityContainer"
-    rarityContainer.Size = UDim2.new(1, -24, 0, 34)
-    rarityContainer.Position = UDim2.new(0, 12, 0, 264)
-    rarityContainer.BackgroundTransparency = 1
-    rarityContainer.Parent = mainFrame
-
-    local rarityLayout = Instance.new("UIListLayout")
-    rarityLayout.FillDirection = Enum.FillDirection.Horizontal
-    rarityLayout.Padding = UDim.new(0, 8)
-    rarityLayout.Parent = rarityContainer
-
-    local rarityCheckboxes = {}
-
-    for _, rarity in ipairs({ "Eterno", "Divino", "Secreto" }) do
-        local internalKey = rarity == "Eterno" and "Eternal" or (rarity == "Divino" and "Divine" or "Secret")
-
-        local cb = Instance.new("TextButton")
-        cb.Name = "RarityCb_" .. internalKey
-        cb.Size = UDim2.new(0, 100, 0, 32)
-        cb.BackgroundColor3 = Color3.fromRGB(45, 70, 45)
-        cb.Text = "☑ " .. rarity
-        cb.TextColor3 = Color3.fromRGB(180, 230, 180)
-        cb.TextSize = 12
-        cb.Font = Enum.Font.GothamMedium
-        cb.BorderSizePixel = 0
-        cb.Parent = rarityContainer
-
-        local cbCorner = Instance.new("UICorner")
-        cbCorner.CornerRadius = UDim.new(0, 6)
-        cbCorner.Parent = cb
-
-        cb.MouseButton1Click:Connect(function()
-            State.RarityFilters[internalKey] = not State.RarityFilters[internalKey]
-            if State.RarityFilters[internalKey] then
-                cb.Text = "☑ " .. rarity
-                cb.BackgroundColor3 = Color3.fromRGB(45, 70, 45)
-                cb.TextColor3 = Color3.fromRGB(180, 230, 180)
-            else
-                cb.Text = "☐ " .. rarity
-                cb.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-                cb.TextColor3 = Color3.fromRGB(130, 130, 150)
-            end
-        end)
-
-        rarityCheckboxes[internalKey] = cb
-    end
-
-    -- Seção: Controles
-    local controlContainer = Instance.new("Frame")
-    controlContainer.Name = "ControlContainer"
-    controlContainer.Size = UDim2.new(1, -24, 0, 44)
-    controlContainer.Position = UDim2.new(0, 12, 0, 314)
-    controlContainer.BackgroundTransparency = 1
-    controlContainer.Parent = mainFrame
-
-    local controlLayout = Instance.new("UIListLayout")
-    controlLayout.FillDirection = Enum.FillDirection.Horizontal
-    controlLayout.Padding = UDim.new(0, 8)
-    controlLayout.Parent = controlContainer
-
-    -- Botão Iniciar
-    local startBtn = Instance.new("TextButton")
-    startBtn.Name = "StartBtn"
-    startBtn.Size = UDim2.new(0, 180, 0, 44)
-    startBtn.BackgroundColor3 = Color3.fromRGB(50, 160, 80)
-    startBtn.Text = "▶ Iniciar"
-    startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    startBtn.TextSize = 16
-    startBtn.Font = Enum.Font.GothamBold
-    startBtn.BorderSizePixel = 0
-    startBtn.Parent = controlContainer
-
-    local startCorner = Instance.new("UICorner")
-    startCorner.CornerRadius = UDim.new(0, 8)
-    startCorner.Parent = startBtn
-
-    -- Botão Parar
-    local stopBtn = Instance.new("TextButton")
-    stopBtn.Name = "StopBtn"
-    stopBtn.Size = UDim2.new(0, 180, 0, 44)
-    stopBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-    stopBtn.Text = "⬛ Parar"
-    stopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    stopBtn.TextSize = 16
-    stopBtn.Font = Enum.Font.GothamBold
-    stopBtn.BorderSizePixel = 0
-    stopBtn.Parent = controlContainer
-
-    local stopCorner = Instance.new("UICorner")
-    stopCorner.CornerRadius = UDim.new(0, 8)
-    stopCorner.Parent = stopBtn
-
-    -- Label de status
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Name = "StatusLabel"
-    statusLabel.Size = UDim2.new(1, -24, 0, 30)
-    statusLabel.Position = UDim2.new(0, 12, 1, -46)
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "Status: Aguardando"
-    statusLabel.TextColor3 = Color3.fromRGB(160, 220, 160)
-    statusLabel.TextSize = 13
-    statusLabel.Font = Enum.Font.GothamMedium
-    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-    statusLabel.Parent = mainFrame
-
-    -- Armazena referências da UI no estado
-    State.UI = {
-        ScreenGui = screenGui,
-        MainFrame = mainFrame,
-        StatusLabel = statusLabel,
-        BiomeButtons = biomeButtons,
-        RarityCheckboxes = rarityCheckboxes
-    }
-
-    -- ==================== LIGAÇÕES DE EVENTOS DA UI ====================
-
-    -- Botão fechar: destrói toda a UI
-    closeBtn.MouseButton1Click:Connect(function()
-        StopAutoFarm()
-        screenGui:Destroy()
-    end)
-
-    -- Botão minimizar: alterna a visibilidade do frame principal
-    local isMinimized = false
-    minimizeBtn.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        if isMinimized then
-            mainFrame.Size = UDim2.new(0, 420, 0, 44)
-        else
-            mainFrame.Size = UDim2.new(0, 420, 0, 500)
-        end
-    end)
-
-    -- Botão voltar para esteira
-    backBtn.MouseButton1Click:Connect(function()
-        -- ============================================================
-        -- SUBSTITUA PELA LÓGICA REAL DE RETORNO À ESTEIRA DO JOGO
-        -- Por exemplo:
-        --   ReplicatedStorage:FindFirstChild("ReturnToTreadmill"):FireServer()
-        -- Ou teleporte para a posição da esteira
-        -- ============================================================
-        UpdateStatus("Voltando para a esteira...")
-        print("[AutoEgg] Voltando para a esteira (substitua pela lógica real)")
-    end)
-
-    -- Botão iniciar
-    startBtn.MouseButton1Click:Connect(function()
-        if not State.IsRunning then
-            StartAutoFarm()
-        end
-    end)
-
-    -- Botão parar
-    stopBtn.MouseButton1Click:Connect(function()
-        StopAutoFarm()
-    end)
-
-    -- ==================== ARRASTAR JANELA ====================
-    local dragging = false
-    local dragInput = nil
-    local dragStart = nil
-    local startPos = nil
-
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragInput = input
-            dragStart = input.Position
-            startPos = mainFrame.Position
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    titleBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
-
--- ==================== INICIALIZAÇÃO ====================
-CreateUI()
-UpdateStatus("Aguardando")
-print("[AutoEgg] UI carregada. Selecione um bioma e pressione Iniciar.")
